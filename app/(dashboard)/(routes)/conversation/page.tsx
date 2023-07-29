@@ -8,7 +8,17 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { ChatCompletionRequestMessage } from "openai"
+import axios from "axios"
+import { cn } from "@/lib/utils"
+import { BotAvatar } from "@/components/UserAvatar"
+import { UserAvatar } from "@/components/BotAvatar"
+import { Empty } from "@/components/ui/empty"
 const ConversationPage = () => {
+  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([])
+  const router = useRouter()
   const form = useForm<z.infer<typeof ConversationSchema>>({
     resolver: zodResolver(ConversationSchema),
     defaultValues: {
@@ -18,7 +28,25 @@ const ConversationPage = () => {
   const isLoading = form.formState.isSubmitting
 
   const onSubmit = async (values: z.infer<typeof ConversationSchema>) => {
-    console.log(values)
+    try {
+      const userMessage: ChatCompletionRequestMessage = {
+        role: "user",
+        content: values.prompt,
+      }
+      const newMessages = [...messages, userMessage]
+
+      const response = await axios.post("/api/conversation", {
+        messages: newMessages,
+      })
+      console.log("🚀 ~ file: page.tsx:37 ~ onSubmit ~ response:", response)
+
+      setMessages((current) => [...current, userMessage, response.data])
+      form.reset()
+    } catch (error) {
+      console.log("Something went wron", error)
+    } finally {
+      router.refresh()
+    }
   }
 
   return (
@@ -60,13 +88,46 @@ const ConversationPage = () => {
               <Button
                 className='col-span-12 lg:col-span-2 w-full'
                 disabled={isLoading}
+                type='submit'
+                size='icon'
               >
                 generate
               </Button>
             </form>
           </Form>
         </div>
-        <div className='space-y-4 '>Message content</div>
+        <div className='space-y-4 '>
+          {isLoading && (
+            <div className='p-8 rounded-lg w-full flex items-center justify-center bg-muted'>
+              {/* <Loader /> */}
+            </div>
+          )}
+          {messages.length === 0 && !isLoading && (
+            // <Empty label='No conversation started.' />
+
+            <div className='p-8 rounded-lg w-full flex items-center justify-center bg-muted'>
+              <p className='text-sm text-muted-foreground'>
+                Start a conversation by entering a prompt above.
+              </p>
+            </div>
+          )}
+          <div className='flex flex-col-reverse gap-y-4'>
+            {messages.map((message) => (
+              <div
+                key={message.content}
+                className={cn(
+                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
+                  message.role === "user"
+                    ? "bg-white border border-black/10"
+                    : "bg-muted"
+                )}
+              >
+                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
+                <p className='text-sm'>{message.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
