@@ -55,7 +55,7 @@ const DashboardPage = () => {
     <div>
       <div className='mb-8 space-y-4 '>
         <h2 className=' text-2xl  md:text-4xl font-bold text-center'>
-          the power ofa AI
+          the power of AI
         </h2>
         <p className='text-muted-foreground font-light text-sm md:text-lg text-center'>
           AI is a powerful tool that can be used to generate content. This
